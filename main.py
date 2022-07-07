@@ -13,6 +13,9 @@ class analyse_audio_file:
         self.data_window = self.window * self.data
         self.X1 = 0
         self.Fs = 0
+        self.maxfreqs = 0
+        self.amplitudes = 0
+        self.phases = 0
 
     def extract_plot_fft(self):
         self.X1 = np.fft.fft(self.data_window)
@@ -25,15 +28,29 @@ class analyse_audio_file:
         plt.plot(freq, log_fft_result)
         plt.show()
         print(np.argmax(self.X1[:(halflen - 1)]) / (len(self.X1) / self.Fs))
-
         return (freq, log_fft_result)
 
     def get_attributs_max(self, numberOfValues = 32):
-        maxind = np.argpartition(self.X1, -numberOfValues)[-numberOfValues:]
-        maxfreqs = maxind / len(self.X1) * self.Fs
-        amplitudes = np.absolute(self.X1[maxind])
-        phases = np.angle(self.X1[maxind])
-        return (maxfreqs, amplitudes, phases)
+        maxindex = np.argmax(self.X1)
+        index_harm = np.arange(0, numberOfValues)
+
+        for x in range(32):
+            index_harm[x] = maxindex * x + maxindex
+
+        self.maxfreqs = index_harm / len(self.X1) * self.Fs
+        self.amplitudes = np.absolute(self.X1[index_harm])
+        self.phases = np.angle(self.X1[index_harm])
+        return (self.maxfreqs, self.amplitudes, self.phases)
+
+    def synth_signal(self):
+        n = np.arange(0, 160000)
+        sound = np.zeros(160000)
+        for x in range(32):
+            sound = sound + self.amplitudes[x] * np.sin(2 * np.pi * self.maxfreqs[x] * n / self.Fs)
+        print(sound)
+        plt.plot(sound)
+        plt.show()
+        return 0
 
 
 
@@ -85,7 +102,10 @@ def laboratoire1_Question2():
 def main():
     test = analyse_audio_file("note_guitare_LAd.wav")
     test.extract_plot_fft()
-    print(test.get_attributs_max())
+    # test.get_attributs_max()
+    test.get_attributs_max()
+    test.synth_signal()
+
 
 
 
