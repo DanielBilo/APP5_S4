@@ -16,7 +16,8 @@ freq = n[:(halflen - 1)] / (len(X1) / Fs)
 plt.plot(freq, np.log10(abs(X1[:(halflen - 1)])))
 plt.show()
 
-maxfreqs = np.argpartition(X1, -32)[-32:]
+maxind = np.argpartition(X1, -32)[-32:]
+maxfreqs = maxind / len(X1) * Fs
 amplitudes = np.absolute(X1[maxfreqs])
 phases = np.angle(X1[maxfreqs])
 
