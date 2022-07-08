@@ -59,7 +59,7 @@ class analyse_audio_file:
         n = np.arange(0, len(self.data_window))
         self.sound = np.zeros(len(self.data_window))
         for x in range(32):
-            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * (self.maxfreqs[x+1] / (len(self.X1)) * self.Fs) * n / self.Fs)
+            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * ((self.maxfreqs[x+1] / (len(self.X1)) * self.Fs) * (2 ** (-2/12))) * n / self.Fs + self.phases[x])
 
         self.sound = self.sound/100000000
         # print(self.sound)
