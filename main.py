@@ -68,7 +68,10 @@ class analyse_audio_file:
         return self.sound
 
     def laboratoire1_Question2(self):
-        N = 2048
+
+        N = 884000
+        # N = 2048
+        n = np.arange(0, N)
         fs = 44100
 
         #Déterminer la fréquence de coupure en rad/échantillon
@@ -77,10 +80,8 @@ class analyse_audio_file:
 
         #Il faut trouver la valeur de K qui permet d'avoir la même valeur que fc_rad_ech
         K = round_odd(fc_rad_ech / np.pi * N + 1)
-        K = 7
+        K = 885
 
-
-        print('K = ', K)
         #Générer la réponse impulsionnelle du filtre
         n = np.arange(-N/2, N/2 )
         omega = 2 * np.pi * n / N #ne devrait pas s'appliquer, car h(n) est dans le domaine du temps???
@@ -92,20 +93,21 @@ class analyse_audio_file:
         h0[0] = K / N
         time_response = np.sin(np.pi * n_without * K / N) / (N * np.sin(np.pi * n_without / N))
         RepImp = np.concatenate((h0, time_response))
+        RepImp = RepImp * 1000
 
-        # plt.subplot(2,1,1)
-        # plt.xlabel("time index")
-        # plt.plot(n, (np.fft.fftshift(RepImp)))
-        # plt.subplot(2,1,2)
-        # plt.xlabel("frequency(Hz)")
+        plt.subplot(2,1,1)
+        plt.xlabel("time index")
+        plt.xlim(-50, 50)
+        plt.plot(n/N * fs, (np.fft.fftshift(RepImp)))
+        plt.subplot(2,1,2)
+        plt.xlabel("frequency(Hz)")
 
 
-        # plt.plot(np.log(np.fft.fftshift(np.fft.fft(np.concatenate((RepImp, np.zeros(1)))))), 'ro')
-        # plt.xlim([0,100])
-        # # plt.ylim([-6, 0])
-        # plt.plot(f_normalise, np.log(np.fft.fftshift(np.fft.fft(RepImp))))
-        #
-        # plt.show()
+        plt.xlim([0,100])
+        # plt.ylim([-6, 0])
+        plt.plot(f_normalise, np.log(np.fft.fftshift(np.fft.fft(RepImp))))
+
+        plt.show()
         #
 
         # print(h)
@@ -137,7 +139,7 @@ def main():
     temp = test.laboratoire1_Question2() * test.synth_signal()
     # print(test.get_samplerate())
      # wavfile.write("example.wav", test.get_samplerate(), test.get_sound().astype(np.int16) * 500)
-    wavfile.write("example.wav", test.get_samplerate(), (temp/2).astype(np.int16))
+    wavfile.write("example.wav", test.get_samplerate(), (temp/2000).astype(np.int16))
     # wavfile.write("example.wav", test.get_samplerate(), (test.laboratoire1_Question2() * test.synth_signal() * 500).astype(np.int16))
 
 
