@@ -10,12 +10,14 @@ from scipy.io.wavfile import write
 class analyse_audio_file:
     def __init__(self, file_dir_str, windowType = np.hanning):
         self.samplerate, self.data = wavfile.read(file_dir_str)
+        # self.data = self.data * np.hanning(len(self.data))
         print(self.data)
         self.windowType = windowType
         self.window = windowType(len(self.data))
         self.data_window = self.window * self.data
-        plt.subplot(2,1,1)
-        plt.plot(self.data)
+        # plt.subplot(2,1,1)
+        # plt.plot(self.data)
+        # plt.show()
         self.X1 = 0
         self.Fs = 0
         self.maxfreqs = 0
@@ -47,7 +49,9 @@ class analyse_audio_file:
         self.maxfreqs, _ = np.asarray(scp.find_peaks(self.X1[:(80000)], distance=1500))
         print('Maxfreqs = ', self.maxfreqs[1:(33)])
         self.amplitudes = np.absolute(self.X1[self.maxfreqs[1:33]])
+        print('Amplitude = ', self.amplitudes)
         self.phases = np.angle(self.X1[self.maxfreqs[1:(33)]])
+        print('Phase = ', self.phases)
 
         return (self.maxfreqs, self.amplitudes, self.phases)
 
@@ -55,7 +59,7 @@ class analyse_audio_file:
         n = np.arange(0, len(self.data_window))
         self.sound = np.zeros(len(self.data_window))
         for x in range(32):
-            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * ((self.maxfreqs[x + 1] / (len(self.X1)) * self.Fs) * (2 ** (1 / 12))) * n / self.Fs + self.phases[x])
+            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * ((self.maxfreqs[x + 1] / (len(self.X1)) * self.Fs) * (2 ** (-5 / 12))) * n / self.Fs + self.phases[x])
 
         self.sound = self.sound/100000000
         # print(self.sound)
@@ -64,72 +68,78 @@ class analyse_audio_file:
         return self.sound
 
     def laboratoire1_Question2(self):
-        N = 1024
-        fc = 2000
+        N = 884
         fs = 44100
-
-        #Déterminer la fréquence de coupure en rad/échantillon
-        fc_rad_ech = fc*2*np.pi/fs
-        # print(fc_rad_ech)
-
-        #Il faut trouver la valeur de K qui permet d'avoir la même valeur que fc_rad_ech
-        # K = ((fc_rad_ech/np.pi)*N) + 1
         K = 3
-        # print(K)
-
         #Générer la réponse impulsionnelle du filtre
         n = np.arange(0, N)
         omega = 2 * np.pi * n / N
         f_normalise = n/N
-
         n_without = np.arange(1, N)
-        h = [K/N]
         h0 = np.zeros(1)
-        h0[0] = K/N
-        formula_array = np.sin(np.pi*n_without*K/N)/(N * np.sin(np.pi * n_without/ N))
-        h = h + formula_array.tolist() #Il faut utiliser la règle de l'Hopital si on a une division par 0
+        h0[0] = 1
+
+        formula_array = np.sin(np.pi * n_without * K/N) / (N * np.sin(np.pi * n_without/ N))
+        Ordre = 884  # K = Ordre + 1
+        h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1)
+        amp_env = np.convolve(h_env, np.abs(self.data))
+        plt.plot(amp_env)
+        plt.show()
+        # formula_array = (1/K) * (np.sin(w * K / 2) / np.sin(w / 2))
         RepImp = np.concatenate((h0, formula_array))
-        # print(RepImp)
-        # plt.plot(omega, (RepImp))
-        # plt.show()
 
 
-        # print(h)
         #Il faut ensuite faire une convolution avec le signal en entrée et le filtre FIR. Cela va donner le signal dans le temps
-        a1 = 1
-        a2 = 0.25
-        f1 = 200
-        f2 = 3000
-        n = np.arange(0, 129)
-        x = abs(self.data) #change for data window
+        x = abs(self.data)
 
+        X = np.fft.fft(RepImp, len(x) + len(RepImp) - 1)
+        H = np.fft.fft(RepImp, len(x) + len(RepImp)-1)
+        Y = np.fft.ifft(H * X)
         result = np.convolve(x, RepImp)
-
-        # plt.plot(result)
-        # plt.show()
-        return result[:(len(self.data_window))]
-
+        # result = np.fft.ifft(Y)
+        plt.subplot(2,1,1)
+        plt.plot(self.data)
+        plt.subplot(2,1,2)
+        plt.plot(result)
+        plt.show()
+        # return result[:(len(self.data))]
+        return amp_env
     def get_samplerate(self):
         return self.samplerate
 
     def get_sound(self):
         return self.sound
 
+    def filtre_1000Hz(self, data):
+        K = 3
+        N = 1024
+        Filtre = np.zeros(N-1)
+        Filtre0 = np.zeros(1)
+        Filtre0[0] = 1 - 6 / 1024
+        n = np.arange(1, N)
+        Filtre = - 2 * ((1/1024) * ((np.sin(np.pi * n * K / N)) / (np.sin(np.pi * n / N))) * np.cos(20 * np.pi * n / 441))
+        Filtre = np.concatenate((Filtre0, Filtre))
+        plt.plot(np.fft.fftshift(np.fft.fft(Filtre)))
+        plt.show()
+        result = np.convolve(data, Filtre)
+        plt.plot(result)
+        plt.show()
+        return result
+
+
 def main():
     test = analyse_audio_file("note_guitare_LAd.wav")
-    test.extract_plot_fft()
+    # test.extract_plot_fft()
     # test.get_attributs_max()
-    test.get_attributs_max()
+    # temp = test.laboratoire1_Question2()/10 * np.concatenate((test.synth_signal(), np.zeros(884)))
+    # wavfile.write("example.wav", test.get_samplerate(), (temp).astype(np.int16))
 
-    plt.subplot(2, 1, 2)
-    plt.plot(test.laboratoire1_Question2() * test.synth_signal())
-    temp = test.laboratoire1_Question2() * test.synth_signal()
+
+    Basson_samplerate, Basson_data = wavfile.read('note_basson_plus_sinus_1000_Hz.wav')
+    plt.plot(Basson_data)
     plt.show()
-    # print(test.get_samplerate())
-    print(test.get_sound())
-    # wavfile.write("example.wav", test.get_samplerate(), test.get_sound().astype(np.int16) * 500)
-    wavfile.write("example.wav", test.get_samplerate(), (temp).astype(np.int16))
-    # wavfile.write("example.wav", test.get_samplerate(), (test.laboratoire1_Question2() * test.synth_signal() * 500).astype(np.int16))
+    sounds = test.filtre_1000Hz(Basson_data * np.hanning(len(Basson_data)))
+    wavfile.write("basson_filtre.wav", Basson_samplerate, sounds.astype(np.int16))
 
 
 
