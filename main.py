@@ -2,6 +2,7 @@ import wave as wv
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
+import scipy.signal as scp
 from scipy.io.wavfile import write
 
 
@@ -43,9 +44,10 @@ class analyse_audio_file:
         for x in range(32):
             index_harm[x] = maxindex * x + maxindex
 
-        self.maxfreqs = index_harm / len(self.X1) * self.Fs
-        self.amplitudes = np.absolute(self.X1[index_harm])
-        self.phases = np.angle(self.X1[index_harm])
+        self.maxfreqs, _ = np.asarray(scp.find_peaks(self.X1[:(80000)], distance=1500))
+        print('Maxfreqs = ', self.maxfreqs[1:(33)])
+        self.amplitudes = np.absolute(self.X1[self.maxfreqs[1:33]])
+        self.phases = np.angle(self.X1[self.maxfreqs[1:(33)]])
 
         return (self.maxfreqs, self.amplitudes, self.phases)
 
@@ -53,7 +55,7 @@ class analyse_audio_file:
         n = np.arange(0, len(self.data_window))
         self.sound = np.zeros(len(self.data_window))
         for x in range(32):
-            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * self.maxfreqs[x] * n / self.Fs)
+            self.sound = self.sound + self.amplitudes[x] * np.sin(2 * np.pi * ((self.maxfreqs[x + 1] / (len(self.X1)) * self.Fs) * (2 ** (1 / 12))) * n / self.Fs + self.phases[x])
 
         self.sound = self.sound/100000000
         # print(self.sound)
