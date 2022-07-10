@@ -61,7 +61,20 @@ class analyse_audio_file:
         h0[0] = 1
         Ordre = self.find_the_K() - 1  # K = Ordre + 1
         h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
-        self.env_temp = np.convolve(h_env, np.abs(self.data_window))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
+
+        n_values = np.arange(-(884/ 2), (884 / 2))
+        xaxies_freq = n_values / 884 * 44100
+        h_env_shft = np.fft.fftshift(np.fft.fft(h_env))
+        print(np.absolute(h_env_shft).astype(int))
+        h_env_shft_log = 20*np.log((np.absolute(h_env_shft)))
+
+        plt.plot(xaxies_freq, h_env_shft_log[0:884])
+        plt.show()
+
+        self.env_temp = np.convolve(h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
+        plt.plot(self.env_temp)
+        plt.show()
+
         return self.env_temp[:(len(self.data))] #Réduire le table pour avoir seulement 160 000 datas
 
     def find_the_K(self, max_k_value = 2000, freq_cut = np.pi/1000):
@@ -79,6 +92,26 @@ class analyse_audio_file:
         n = np.arange(1, N)
         Filtre = - 2 * ((1/1024) * ((np.sin(np.pi * n * K / N)) / (np.sin(np.pi * n / N))) * np.cos(20 * np.pi * n / 441)) #Filter dans le domaine du temps (Réponse impulsionnelle)
         Filtre = np.concatenate((Filtre0, Filtre)) #Ajout de la valeur 0 et de la formule du filtre dans le temps
+        plt.plot(Filtre)
+        plt.show()
+
+        print("here")
+        n_for_sinus = np.arange(0,1024)
+        sinus_test_1000 = np.sin((2*np.pi*n_for_sinus*1000/self.Fs))
+        plt.plot(sinus_test_1000)
+        plt.show()
+        print("SInus filtered")
+        sinus_test_filtered = np.convolve(sinus_test_1000, Filtre)
+        plt.plot(sinus_test_filtered)
+        plt.show()
+
+        n_values = np.arange(-(N/2), (N/2))
+        Filtre_fft = np.fft.fftshift(np.fft.fft(Filtre))
+        Filtre_fft_dB = 20 * np.log10(Filtre_fft)
+        xaxies_freq = n_values/N*44100
+        plt.plot(xaxies_freq, Filtre_fft_dB)
+        plt.show()
+
         result = np.convolve(self.data_window, Filtre)
         self.data = result[:(len(self.data))]
         return result
@@ -96,7 +129,7 @@ class analyse_audio_file:
         self.data_window = self.window*self.data
 
     def extract_plot_fft(self):
-        self.X1 = np.fft.fft(self.data_window) #change for window
+        self.X1 = np.fft.fft(self.data) #change for window
 
     def get_samplerate(self):
         return self.Fs
@@ -106,8 +139,6 @@ class analyse_audio_file:
 
     def get_temp_env(self):
         return self.env_temp
-
-
 
     def show_FFT_result(self):
         halflen = int(len(self.X1) / 2)
@@ -122,16 +153,18 @@ def main():
     guitar_synth = analyse_audio_file("note_guitare_LAd.wav", pre_filter=False)
     basson_synth  = analyse_audio_file("note_basson_plus_sinus_1000_Hz.wav", pre_filter=True)
 
-    SOL = guitar_synth.get_temp_env() * guitar_synth.synth_signal(-3)
-    FA = guitar_synth.get_temp_env() * guitar_synth.synth_signal(-5)
-    RE = guitar_synth.get_temp_env() * guitar_synth.synth_signal(-8)
-    MIb = guitar_synth.get_temp_env() * guitar_synth.synth_signal(-7)
+    guitar_synth.show_FFT_result()
+
+    SOL = basson_synth.get_temp_env() * basson_synth.synth_signal(-3)
+    FA = basson_synth.get_temp_env() * basson_synth.synth_signal(-5)
+    RE = basson_synth.get_temp_env() * basson_synth.synth_signal(-8)
+    MIb = basson_synth.get_temp_env() * basson_synth.synth_signal(-7)
 
     demi = 22175
     un = 44350
     deux = 88700
     silence = np.zeros(demi)
-    start = 10000
+    start = 21000
     args = (SOL[start:start + demi], SOL[start:start + demi], SOL[start:start + demi],
                              MIb[start:start + deux], silence, FA[start:start + demi], FA[start:start + demi],
                              FA[start:start + demi], RE[start:start + deux])
