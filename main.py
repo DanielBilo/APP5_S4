@@ -16,6 +16,7 @@ class analyse_audio_file:
         self.data_length = len(self.data)
         self.window = 0
         self.data_window = 0
+        self.h_env = 0
         self.X1 = 0
         self.maxfreqs = 0
         self.amplitudes = 0
@@ -23,6 +24,7 @@ class analyse_audio_file:
         self.sound = 0
         self.env_temp = 0
         self.filter = 0
+        self.data_before_filtering = 0
 
         self.initialize_values(pre_filter)
 
@@ -66,8 +68,8 @@ class analyse_audio_file:
         h0 = np.zeros(1)
         h0[0] = 1
         Ordre = self.find_the_K() - 1  # K = Ordre + 1
-        h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
-        self.env_temp = np.convolve(h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
+        self.h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
+        self.env_temp = np.convolve(self.h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
         return self.env_temp[:(len(self.data))] #Réduire le table pour avoir seulement 160 000 datas
 
     def find_the_K(self, max_k_value = 2000, freq_cut = np.pi/1000):
@@ -86,12 +88,13 @@ class analyse_audio_file:
         n = np.arange(1, N)
         self.filter = - 2 * ((1/1024) * ((np.sin(np.pi * n * K / N)) / (np.sin(np.pi * n / N))) * np.cos(20 * np.pi * n / 441)) #Filter dans le domaine du temps (Réponse impulsionnelle)
         self.filter = np.concatenate((Filtre0, self.filter)) #Ajout de la valeur 0 et de la formule du filtre dans le temps
+        self.data_before_filtering = self.data
 
 
     def apply_filtre_1000Hz(self):
         result = np.convolve(self.data_window, self.filter)
         self.data = result[:(len(self.data))]
-        wavfile.write("basson_filtre_V2.wav", self.Fs, result.astype(np.int16))
+        wavfile.write("basson_filtre_V2", self.Fs, result.astype(np.int16))
         return result
 
     def create_synth_note(self, index_harmonique):
@@ -118,31 +121,55 @@ class analyse_audio_file:
     def get_temp_env(self):
         return self.env_temp
 
+    def show_FFT_result_before_filtering(self):
+        X1_before = np.fft.fft(self.data_before_filtering)
+        halflen = int(len(X1_before) / 2)
+        n = np.arange(0, len(self.data))
+        freq = n[:(halflen - 1)] / (len(X1_before) / self.Fs)
+        log_fft_result = 20 * np.log10(abs(X1_before[:(halflen - 1)]))
+        plt.title("FFT du signal entrant avant le filtrage de " + self.file_dir_str)
+        plt.plot(freq, log_fft_result)
+        plt.show()
+
     def show_FFT_result(self):
         halflen = int(len(self.X1) / 2)
         n = np.arange(0, len(self.data))
         freq = n[:(halflen - 1)] / (len(self.X1) / self.Fs)
         log_fft_result = 20 * np.log10(abs(self.X1[:(halflen - 1)]))
+        plt.title("FFT du signal entrant de " + self.file_dir_str)
         plt.plot(freq, log_fft_result)
         plt.show()
 
     def show_env_temp(self):
         plt.plot(self.env_temp)
+        plt.title("Affichage de l'enveloppe")
         plt.show()
 
     def show_filter(self):
         freq = (np.arange(-1024/2, 1024/2)*self.Fs/1024)
+        plt.title("FFT du filtre de 1000Hz")
         plt.plot(freq, np.fft.fftshift(np.fft.fft(self.filter)))
         plt.show()
 
-    def test_filter(self, frequency, frequency_s):
+    def show_fft_envelop(self):
+        n = np.arange((-884/2), (884/2)+1)
+        n_freq = n*self.Fs/884
+        h_env_fft = np.fft.fftshift(np.fft.fft(self.h_env))
+        plt.plot(n_freq,h_env_fft)
+        plt.title("FFT du Filtre pour l'enveloppe")
+        #plt.plot(20*np.log10(h_env_fft)) doesn't work
+        plt.show()
+
+    def test_filter(self):
         n = np.arange(0, self.data_length)
         sinus_function = np.sin(2 * np.pi * n * 1000 / self.Fs)
 
         result = np.convolve(sinus_function, self.filter)
         result = result[:(len(sinus_function))]
+        plt.title("Sinus de 1000Hz filtrée")
         plt.plot(result)
         plt.show()
+
 
 
 
@@ -166,7 +193,8 @@ def main():
 
     musique = np.concatenate(args)
     wavfile.write("musique2.wav", basson_synth.get_samplerate(), musique.astype(np.int16))
-    basson_synth.show_filter()
+    basson_synth.show_FFT_result()
+    basson_synth.show_FFT_result_before_filtering()
 
 
 
