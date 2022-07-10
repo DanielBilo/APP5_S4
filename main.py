@@ -50,7 +50,7 @@ class analyse_audio_file:
         self.maxfreqs = np.asarray(find_peak, dtype=object)[0]
         self.amplitudes = np.absolute(self.X1[self.maxfreqs[1:33]])
         self.phases = np.angle(self.X1[self.maxfreqs[1:(33)]])
-        
+
     def get_data_raw(self):
         return self.data
 
