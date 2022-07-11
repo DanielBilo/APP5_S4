@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
 import scipy.signal as scp
+import xlsxwriter
 
 
 
@@ -41,7 +42,7 @@ class analyse_audio_file:
         wavfile.write(self.file_dir_str + "_after_synth_V2.wav", self.Fs, (self.get_temp_env()*self.synth_signal(0)).astype(np.int16))
 
     def get_attributs_max(self, numberOfValues = 32):
-        peak_distance_values = {"note_guitare_LAd.wav":1500, "note_basson_plus_sinus_1000_Hz.wav": 600}
+        peak_distance_values = {"note_guitare_LAd.wav":1500, "note_basson_plus_sinus_1000_Hz.wav": 500}
         peak_distance = peak_distance_values[self.file_dir_str]
         maxindex = np.argmax(self.X1)
         index_harm = np.arange(0, numberOfValues)
@@ -50,8 +51,24 @@ class analyse_audio_file:
         find_peak = scp.find_peaks(self.X1[:(80000)], distance=peak_distance)
 
         self.maxfreqs = np.asarray(find_peak, dtype=object)[0]
+        print(self.maxfreqs)
         self.amplitudes = np.absolute(self.X1[self.maxfreqs[1:33]])
         self.phases = np.angle(self.X1[self.maxfreqs[1:(33)]])
+
+        workbook = xlsxwriter.Workbook(self.file_dir_str.rstrip(".wave") + '.xlsx')
+        worksheet = workbook.add_worksheet()
+        worksheet.write(0,0,"frequency")
+        worksheet.write(0,1,"amplitude")
+        worksheet.write(0, 1, "angle")
+
+        for row in range(1,33):
+            # write operation perform
+            worksheet.write(row, 0, (self.maxfreqs[row -1]/self.data_length)*self.Fs)
+            worksheet.write(row, 1, self.amplitudes[row-1])
+            worksheet.write(row, 2, self.phases[row-1])
+            row += 1
+        workbook.close()
+
 
     def get_data_raw(self):
         return self.data
