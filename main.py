@@ -93,7 +93,7 @@ class analyse_audio_file:
         Ordre = self.find_the_K() - 1  # K = Ordre + 1
         self.h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
         self.env_temp = np.convolve(self.h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
-        self.env_temp = self.env_temp #/np.ptp(self.env_temp)
+        self.env_temp = self.env_temp /np.ptp(self.env_temp)
         return self.env_temp[:(len(self.data))] #Réduire le table pour avoir seulement 160 000 datas
 
     def find_the_K(self, max_k_value = 2000, freq_cut = np.pi/1000):
@@ -261,6 +261,8 @@ def main():
 
 
     guitar_synth.show_cutband_impulsion()
+    guitar_synth.create_symph_mega_cool()
+    basson_synth.create_symph_mega_cool()
     # basson_synth.show_Frequency_Response_envelop(2*np.pi/1000)
 
 
