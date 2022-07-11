@@ -6,7 +6,7 @@ import scipy.signal as scp
 import xlsxwriter
 
 
-
+# dans la fonction de l'enveloppe, il faut mettre en commentaire la remise à l'échelle de la fenêtre pour le voir dans le graphique
 
 class analyse_audio_file:
     def __init__(self, file_dir_str, windowType = np.hanning, pre_filter = False):
