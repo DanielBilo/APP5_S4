@@ -40,9 +40,10 @@ class analyse_audio_file:
             filtered = True
         self.create_window()
         self.create_windowData()
+        self.create_time_envelop()
         self.extract_plot_fft(filtered)
         self.get_attributs_max()
-        self.create_time_envelop()
+
         wavfile.write(self.file_dir_str + "_after_synth_V2.wav", self.Fs, (self.get_temp_env()*self.synth_signal(0)).astype(np.int16))
 
     def get_attributs_max(self, numberOfValues = 32):
@@ -84,7 +85,7 @@ class analyse_audio_file:
         if self.file_dir_str.rsplit("_")[1] == "basson":
             self.sound = self.sound/10000
         else:
-            self.sound = self.sound / 1000
+            self.sound = self.sound / 1600
         return self.sound
 
     def create_time_envelop(self):
@@ -93,15 +94,13 @@ class analyse_audio_file:
         Ordre = self.find_the_K() - 1  # K = Ordre + 1
         self.h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
         self.env_temp = np.convolve(self.h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
-        self.env_temp = self.env_temp /np.ptp(self.env_temp)
+        self.env_temp = self.env_temp/np.ptp(self.env_temp)
         return self.env_temp[:(len(self.data))] #Réduire le table pour avoir seulement 160 000 datas
 
     def find_the_K(self, max_k_value = 2000, freq_cut = np.pi/1000):
-
         for K in range(1, max_k_value):
             value_pi_1000 = (1/K)*(np.sin(freq_cut*K/2))/np.sin(freq_cut/2)
             if(value_pi_1000 > 0.707) and (value_pi_1000 < 0.708):
-
                 return K
         return 0
 
@@ -184,8 +183,8 @@ class analyse_audio_file:
         plt.ylabel('Amplitude')
         plt.plot(self.data)
         plt.plot(self.env_temp)
-        plt.title("Données avec la fenêtre appliqué" + self.file_dir_str)
-        plt.legend(["line 1", "line2"])
+        plt.title("Données avec la fenêtre appliqué sur le fichier audio du/de la " + self.file_dir_str.rsplit("_")[1])
+        plt.legend(["Données du fichier", "Valeurs de la fenêtre"])
         plt.show()
 
     def show_filter(self):
@@ -200,10 +199,10 @@ class analyse_audio_file:
     def show_Frequency_Response_envelop(self, xlimit = np.pi):
         K = 885
         n = np.arange(-np.pi, np.pi, 0.00001)
-        X = 20*np.log10((1 / K) * (np.sin(n * K / 2)) / np.sin(n / 2))
+        X = 20*np.log10(np.abs((1 / K) * (np.sin(n * K / 2)) / np.sin(n / 2)))
         plt.xlim(-xlimit, xlimit)
         plt.plot(n,X)
-        plt.xlabel('fréquence')
+        plt.xlabel('Radian/échantillon')
         plt.ylabel('Amplitude (dB)')
         plt.title("Réponse en fréquence (TFSD) du filtre de l'enveloppe temporel")
         plt.show()
@@ -241,14 +240,28 @@ class analyse_audio_file:
 
         X_filter = np.fft.fft(self.filter)[0:int(len(self.filter)/2)]
         fig, axs = plt.subplots(2)
-        fig.suptitle('Vamplitude et phase de la réponse en fréquence du filtre coupe-bande')
-        axs[0].stem(np.absolute(X_filter))
+        fig.suptitle('amplitude et phase de la réponse en fréquence du filtre coupe-bande')
+        axs[0].plot(np.absolute(X_filter))
         axs[0].set_xlim(0,x_limit)
         axs[0].set_ylabel("Amplitude")
-        axs[1].stem(np.angle(X_filter))
+        axs[1].plot(np.angle(X_filter))
         axs[1].set_ylabel("phase")
         axs[1].set_xlabel("échantillon")
         axs[1].set_xlim(0,x_limit)
+        plt.show()
+
+    def show_FFT_signal_synth(self):
+
+        X_synth = np.fft.fft(self.create_synth_note(0))
+        halflen = int(len(X_synth) / 2)
+        n = np.arange(0, len(self.data))
+        freq = n[:(halflen - 1)] / (len(X_synth) / self.Fs)
+        log_fft_result = 20 * np.log10(abs(X_synth[:(halflen - 1)]))
+
+        plt.xlabel('Fréquences')
+        plt.ylabel('Amplitude (dB)')
+        plt.title("FFT du signal synthonisé de " + self.file_dir_str)
+        plt.plot(freq, log_fft_result)
         plt.show()
 
 
@@ -260,7 +273,13 @@ def main():
     basson_synth  = analyse_audio_file("note_basson_plus_sinus_1000_Hz.wav",windowType = np.blackman, pre_filter=True)
 
 
-    guitar_synth.show_cutband_impulsion()
+    guitar_synth.show_FFT_result()
+    guitar_synth.show_FFT_signal_synth()
+    basson_synth.show_FFT_result()
+    basson_synth.show_FFT_signal_synth()
+
+
+    basson_synth.show_env_temp()
     guitar_synth.create_symph_mega_cool()
     basson_synth.create_symph_mega_cool()
     # basson_synth.show_Frequency_Response_envelop(2*np.pi/1000)
