@@ -108,9 +108,9 @@ class analyse_audio_file:
 
 
     def apply_filtre_1000Hz(self):
-        result = np.convolve(self.data_window, self.filter)
+        result = np.convolve(np.convolve(self.data_window, self.filter), self.filter)
         self.data = result[:(len(self.data))]
-        wavfile.write("basson_filtre_V2", self.Fs, result.astype(np.int16))
+        wavfile.write("basson_filtre.wav", self.Fs, result.astype(np.int16))
         return result
 
     def create_synth_note(self, index_harmonique):
@@ -126,7 +126,7 @@ class analyse_audio_file:
         self.data_window = self.window*self.data
 
     def extract_plot_fft(self):
-        self.X1 = np.fft.fft(self.data) #change for window
+        self.X1 = np.fft.fft(self.data * np.hanning(self.data_length))
 
     def get_samplerate(self):
         return self.Fs
@@ -164,30 +164,33 @@ class analyse_audio_file:
     def show_filter(self):
         freq = (np.arange(-1024/2, 1024/2)*self.Fs/1024)
         plt.title("FFT du filtre de 1000Hz")
-        plt.plot(freq, np.fft.fftshift(np.fft.fft(self.filter)))
+        plt.xlim(0, 2000)
+        plt.plot(freq, np.fft.fftshift(np.fft.fft(self.filter)), 'ro')
         plt.show()
 
     def show_fft_envelop(self):
         n = np.arange((-884/2), (884/2)+1)
         n_freq = n*self.Fs/884
         h_env_fft = np.fft.fftshift(np.fft.fft(self.h_env))
-        plt.plot(n_freq,h_env_fft)
+        plt.plot(n_freq, h_env_fft)
         plt.title("FFT du Filtre pour l'enveloppe")
         #plt.plot(20*np.log10(h_env_fft)) doesn't work
         plt.show()
 
     def test_filter(self):
         n = np.arange(0, self.data_length)
-        sinus_function = np.sin(2 * np.pi * n * 1000 / self.Fs)
-
+        sinus_function = np.sin(2 * np.pi * n * 1000 / self.Fs) #* np.hanning(self.data_length)
         result = np.convolve(sinus_function, self.filter)
         result = result[:(len(sinus_function))]
+
+        plt.subplot(2,1,1)
+        plt.title("Sinus de 1000Hz")
+        plt.plot(sinus_function)
+
+        plt.subplot(2,1,2)
         plt.title("Sinus de 1000Hz filtrée")
         plt.plot(result)
         plt.show()
-
-
-
 
 def main():
     guitar_synth = analyse_audio_file("note_guitare_LAd.wav", pre_filter=False)
@@ -211,9 +214,6 @@ def main():
     wavfile.write("musique2.wav", basson_synth.get_samplerate(), musique.astype(np.int16))
     basson_synth.show_FFT_result()
     basson_synth.show_FFT_result_before_filtering()
-
-
-
 
 
 if __name__ == '__main__':
