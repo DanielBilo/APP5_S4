@@ -51,7 +51,6 @@ class analyse_audio_file:
         find_peak = scp.find_peaks(self.X1[:(80000)], distance=peak_distance)
 
         self.maxfreqs = np.asarray(find_peak, dtype=object)[0]
-        print(self.maxfreqs)
         self.amplitudes = np.absolute(self.X1[self.maxfreqs[1:33]])
         self.phases = np.angle(self.X1[self.maxfreqs[1:(33)]])
 
