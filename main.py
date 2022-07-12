@@ -63,7 +63,7 @@ class analyse_audio_file:
         worksheet = workbook.add_worksheet()
         worksheet.write(0,0,"frequency")
         worksheet.write(0,1,"amplitude")
-        worksheet.write(0, 1, "angle")
+        worksheet.write(0, 2, "angle")
 
         for row in range(1,33):
             # write operation perform
