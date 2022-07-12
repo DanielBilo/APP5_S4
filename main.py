@@ -6,7 +6,6 @@ import scipy.signal as scp
 import xlsxwriter
 
 
-# dans la fonction de l'enveloppe, il faut mettre en commentaire la remise à l'échelle de la fenêtre pour le voir dans le graphique
 
 class analyse_audio_file:
     def __init__(self, file_dir_str, windowType = np.hanning, pre_filter = False):
@@ -27,6 +26,7 @@ class analyse_audio_file:
         self.filter = 0
         self.data_before_filtering = 0
         self.pure_data = 0
+        self.peak = 0
 
         self.initialize_values(pre_filter)
 
@@ -50,9 +50,6 @@ class analyse_audio_file:
         peak_distance_values = {"note_guitare_LAd.wav":1500, "note_basson_plus_sinus_1000_Hz.wav": 500}
         peak_distance = peak_distance_values[self.file_dir_str]
         maxindex = np.argmax(self.X1)
-        index_harm = np.arange(0, numberOfValues)
-        for x in range(32):
-            index_harm[x] = maxindex * x + maxindex
         find_peak = scp.find_peaks(self.X1[:(80000)], distance=peak_distance)
 
         self.maxfreqs = np.asarray(find_peak, dtype=object)[0]
@@ -94,7 +91,8 @@ class analyse_audio_file:
         Ordre = self.find_the_K() - 1  # K = Ordre + 1
         self.h_env = np.ones(Ordre + 1) * 1 / (Ordre + 1) #L'enveloppe de la moyenne dans le temps
         self.env_temp = np.convolve(self.h_env, np.abs(self.data))[:(len(self.data))] #Covolution fait, car dans le domaine temporel
-        self.env_temp = self.env_temp/np.ptp(self.env_temp)
+        self.peak = np.ptp(self.env_temp)
+        self.env_temp = self.env_temp /self.peak
         return self.env_temp[:(len(self.data))] #Réduire le table pour avoir seulement 160 000 datas
 
     def find_the_K(self, max_k_value = 2000, freq_cut = np.pi/1000):
@@ -136,9 +134,9 @@ class analyse_audio_file:
 
     def extract_plot_fft(self, filtered):
         if filtered:
-            self.X1 = np.fft.fft(self.data_window) #change for window
+            self.X1 = np.fft.fft(self.data_window)
         else:
-            self.X1 = np.fft.fft(self.data_window)  # change for window
+            self.X1 = np.fft.fft(self.data_window)
 
     def get_samplerate(self):
         return self.Fs
@@ -182,9 +180,9 @@ class analyse_audio_file:
         plt.xlabel('Échantillon')
         plt.ylabel('Amplitude')
         plt.plot(self.data)
-        plt.plot(self.env_temp)
+        plt.plot(self.env_temp*self.peak)
         plt.title("Données avec la fenêtre appliqué sur le fichier audio du/de la " + self.file_dir_str.rsplit("_")[1])
-        plt.legend(["Données du fichier", "Valeurs de la fenêtre"])
+        plt.legend(["Données du fichier", "Valeurs de l'enveloppe temporelle"])
         plt.show()
 
     def show_filter(self):
@@ -277,8 +275,7 @@ def main():
     guitar_synth.show_FFT_signal_synth()
     basson_synth.show_FFT_result()
     basson_synth.show_FFT_signal_synth()
-
-
+    guitar_synth.show_env_temp()
     basson_synth.show_env_temp()
     guitar_synth.create_symph_mega_cool()
     basson_synth.create_symph_mega_cool()
